@@ -4,11 +4,17 @@ using UnityEngine;
 
 public class Controller : MonoBehaviour
 {
-    // Track what is last selected
-    public Collider prevSelected = null;
+    // Tracking space of character, to help with throws
+    public Transform trackingSpace;
 
-    // Track selected items, would only allow one item to be selected at a time
-    private Collider selectedCollider = null;
+    // Track selected objects
+    private GameObject collidingObject = null;  // collider that the hand is colliding with
+    public GameObject selectedObject = null; // collider that we last grabbed
+    public GameObject prevSelectedObject = null; // collider that was previously selected
+    
+    private Vector3 prevSelectedObjectPosition;
+
+    private bool isHolding = false; // tracks when user is already holding an object
 
     // Start is called before the first frame update
     void Start()
@@ -19,49 +25,70 @@ public class Controller : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        // If colliding with something
-        if (selectedCollider)
+        // If pressing trigger and not already holding something
+        if (OVRInput.Get(OVRInput.RawButton.RIndexTrigger) && !isHolding)
         {
-            // If pressing trigger
-            if (OVRInput.Get(OVRInput.Axis1D.SecondaryIndexTrigger) > 0)
+            // If there is something to grab
+            if (collidingObject)
             {
-                // Mark item as previously selected
-                prevSelected = selectedCollider;
+                // Mark that you are now holding something
+                isHolding = true;
 
-                // Ignore gravity and collisions
-                if (selectedCollider.attachedRigidbody)
+                // Remember previously selected
+                prevSelectedObject = selectedObject;
+
+                // Mark that collidingObject is now selected
+                selectedObject = collidingObject;
+
+                // Unhighlight previously selectedObject
+                if (prevSelectedObject)
                 {
-                    selectedCollider.attachedRigidbody.isKinematic = true;
+                    prevSelectedObject.GetComponent<Outline>().enabled = false;
                 }
-                selectedCollider.transform.SetParent(this.transform);
+
+                // Highlight selectedObject
+                selectedObject.GetComponent<Outline>().enabled = true;
+
+                // Disable gravity and momentum on selected object
+                Rigidbody rb = selectedObject.GetComponent<Rigidbody>();
+                if (rb)
+                {
+                    rb.isKinematic = true;
+                }
+
+                // Have object follow transformations of hand
+                selectedObject.transform.SetParent(this.transform);
             }
-            // Not pressing trigger
-            else
+        }
+        // If not pressing trigger and holding something
+        else if (!OVRInput.Get(OVRInput.RawButton.RIndexTrigger) && isHolding)
+        {
+            // Mark that you are not holding
+            isHolding = false;
+
+            // Reenable gravity and momentum
+            Rigidbody rb = selectedObject.GetComponent<Rigidbody>();
+            if (rb)
             {
-                // Reapply gravity
-                if (selectedCollider.attachedRigidbody)
-                {
-                    selectedCollider.attachedRigidbody.isKinematic = false;
-                }
-                // Object no longer follows hand
-                selectedCollider.transform.SetParent(null);
+                rb.isKinematic = false;
+                rb.velocity = trackingSpace.rotation * (2.0f * OVRInput.GetLocalControllerVelocity(OVRInput.Controller.RTouch));
+                rb.angularVelocity = 0.5f * OVRInput.GetLocalControllerAngularVelocity(OVRInput.Controller.RTouch);
             }
+
+            // No longer inherit transforms
+            selectedObject.transform.SetParent(null);
         }
     }
 
     private void OnTriggerEnter(Collider other)
     {
         // Indicate that this is the one object being selected
-        selectedCollider = other;
-        // Highlight
-        selectedCollider.gameObject.GetComponent<Outline>().enabled = true;
+        collidingObject = other.gameObject;
     }
 
     private void OnTriggerExit(Collider other)
     {
-        // Unhighlight
-        selectedCollider.gameObject.GetComponent<Outline>().enabled = false;
-        // Nothing is selected
-        selectedCollider = null;
+        // Nothing is colliding
+        collidingObject = null;
     }
 }
