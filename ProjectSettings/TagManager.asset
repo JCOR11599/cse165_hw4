@@ -3,7 +3,19 @@
 --- !u!78 &1
 TagManager:
   serializedVersion: 2
-  tags: []
+  tags:
+  - Gravity
+  - Size
+  - Block
+  - Yellow
+  - Red
+  - Green
+  - Blue
+  - Prism
+  - CreateCube
+  - CreatePrism
+  - CreateSphere
+  - CreateCylinder
   layers:
   - Default
   - TransparentFX
@@ -15,7 +27,7 @@ TagManager:
   - 
   - Player
   - Objects
-  - 
+  - Selector
   - 
   - 
   - 
